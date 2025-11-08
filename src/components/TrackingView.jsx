@@ -26,9 +26,6 @@ const TrackingView = () => {
     clearForm,
     addMediaEntry,
     removeMediaEntry,
-    addMeal,
-    updateMeal,
-    removeMeal,
     trackingData
   } = useTrackerStore((state) => ({
     formData: state.formData,
@@ -39,18 +36,13 @@ const TrackingView = () => {
     clearForm: state.clearForm,
     addMediaEntry: state.addMediaEntry,
     removeMediaEntry: state.removeMediaEntry,
-    addMeal: state.addMeal,
-    updateMeal: state.updateMeal,
-    removeMeal: state.removeMeal,
     trackingData: state.trackingData
   }));
-  const mealSuggestions = useTrackerStore((state) => state.getMealSuggestions());
 
   const [mediaType, setMediaType] = useState('image');
   const [mediaContent, setMediaContent] = useState('');
   const [mediaCaption, setMediaCaption] = useState('');
   const mediaEntries = formData.mediaEntries ?? [];
-  const meals = formData.meals ?? [];
   const navigate = useNavigate();
   const hasExistingEntry = Boolean(trackingData[selectedDate]);
   const selectedDateLabel = useMemo(() => {
@@ -65,20 +57,6 @@ const TrackingView = () => {
       return selectedDate;
     }
   }, [selectedDate]);
-
-  const getCurrentTimeString = () => {
-    const now = new Date();
-    let hours = now.getHours();
-    const rounded = Math.round(now.getMinutes() / 5) * 5;
-    let minutes = rounded;
-    if (rounded === 60) {
-      hours = (hours + 1) % 24;
-      minutes = 0;
-    }
-    const hoursString = hours.toString().padStart(2, '0');
-    const minutesString = minutes.toString().padStart(2, '0');
-    return `${hoursString}:${minutesString}`;
-  };
 
   const createMediaId = () =>
     typeof crypto !== 'undefined' && crypto.randomUUID
@@ -112,24 +90,6 @@ const TrackingView = () => {
     if (window.confirm('Are you sure you want to clear all fields?')) {
       clearForm();
     }
-  };
-
-  const handleAddMeal = () => {
-    addMeal({ time: getCurrentTimeString() });
-  };
-
-  const handleMealChange = (id, field, value) => {
-    updateMeal(id, { [field]: value });
-  };
-
-  const handleUseSuggestion = (suggestion) => {
-    addMeal({
-      name: suggestion.name,
-      quantity: suggestion.quantity,
-      unit: suggestion.unit,
-      category: suggestion.category || 'Meal',
-      time: suggestion.time || getCurrentTimeString()
-    });
   };
 
   return (
@@ -166,6 +126,20 @@ const TrackingView = () => {
       </Card>
 
       <QuickMetricsBoard />
+
+      <Card className="border-emerald-400/40 bg-emerald-500/5">
+        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle className="text-lg">Need to log meals?</CardTitle>
+            <CardDescription>
+              Head to the dedicated nutrition workspace to capture meals without the rest of today&apos;s trackers.
+            </CardDescription>
+          </div>
+          <Button type="button" variant="secondary" className="gap-2" onClick={() => navigate('/diet')}>
+            Open Nutrition Log →
+          </Button>
+        </CardHeader>
+      </Card>
 
       <div className="grid gap-6 xl:grid-cols-2">
         <MoveRechargeCard />
@@ -262,162 +236,6 @@ const TrackingView = () => {
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-amber-400/40">
-        <CardHeader>
-          <CardTitle className="text-lg">🍽️ Meals &amp; Eating Window</CardTitle>
-          <CardDescription>
-            Log what you ate, when you ate it, and the quantity. Tap a suggestion to auto-fill from your past favourites.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Quick Suggestions</Label>
-            {mealSuggestions.length === 0 ? (
-              <p className="rounded-md border border-dashed border-muted p-3 text-sm text-muted-foreground">
-                Once you log a few meals, we&apos;ll surface your most common go-tos here for speedy tracking.
-              </p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {mealSuggestions.map((suggestion, index) => (
-                  <button
-                    key={`${suggestion.name}-${suggestion.time || 'any'}-${index}`}
-                    type="button"
-                    className="rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary transition hover:border-primary/40 hover:bg-primary/10"
-                    onClick={() => handleUseSuggestion(suggestion)}
-                  >
-                    {suggestion.name}
-                    {suggestion.time ? ` · ${suggestion.time}` : ''}
-                    {suggestion.count > 1 ? ` ×${suggestion.count}` : ''}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            {meals.length === 0 ? (
-              <p className="rounded-md border border-dashed border-muted p-4 text-sm text-muted-foreground">
-                No meals logged yet. Add your first meal to build a tailored eating timeline.
-              </p>
-            ) : (
-              meals.map((meal) => (
-                <div key={meal.id} className="space-y-4 rounded-2xl border border-muted/60 bg-muted/5 p-4 shadow-sm">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="space-y-1">
-                        <Label htmlFor={`meal-name-${meal.id}`} className="text-xs uppercase tracking-wide text-muted-foreground">
-                          Meal name
-                        </Label>
-                        <Input
-                          id={`meal-name-${meal.id}`}
-                          value={meal.name}
-                          onChange={(event) => handleMealChange(meal.id, 'name', event.target.value)}
-                          placeholder="E.g. Overnight oats"
-                          className="w-56"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor={`meal-category-${meal.id}`} className="text-xs uppercase tracking-wide text-muted-foreground">
-                          Category
-                        </Label>
-                        <Select
-                          id={`meal-category-${meal.id}`}
-                          value={meal.category || 'Meal'}
-                          onChange={(event) => handleMealChange(meal.id, 'category', event.target.value)}
-                          className="w-40"
-                        >
-                          {['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Beverage', 'Treat', 'Meal'].map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor={`meal-time-${meal.id}`} className="text-xs uppercase tracking-wide text-muted-foreground">
-                          Time
-                        </Label>
-                        <Input
-                          id={`meal-time-${meal.id}`}
-                          type="time"
-                          value={meal.time}
-                          onChange={(event) => handleMealChange(meal.id, 'time', event.target.value)}
-                          className="w-32"
-                        />
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="self-start text-xs uppercase tracking-wide text-muted-foreground transition hover:text-destructive"
-                      onClick={() => removeMeal(meal.id)}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr),minmax(0,1fr),minmax(0,1fr)]">
-                    <div className="space-y-1">
-                      <Label htmlFor={`meal-quantity-${meal.id}`} className="text-xs uppercase tracking-wide text-muted-foreground">
-                        Quantity
-                      </Label>
-                      <Input
-                        id={`meal-quantity-${meal.id}`}
-                        value={meal.quantity}
-                        onChange={(event) => handleMealChange(meal.id, 'quantity', event.target.value)}
-                        placeholder="e.g. 1.5"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor={`meal-unit-${meal.id}`} className="text-xs uppercase tracking-wide text-muted-foreground">
-                        Unit
-                      </Label>
-                      <Input
-                        id={`meal-unit-${meal.id}`}
-                        value={meal.unit}
-                        onChange={(event) => handleMealChange(meal.id, 'unit', event.target.value)}
-                        placeholder="Cup, grams, bowl…"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor={`meal-notes-${meal.id}`} className="text-xs uppercase tracking-wide text-muted-foreground">
-                        Notes (optional)
-                      </Label>
-                      <Input
-                        id={`meal-notes-${meal.id}`}
-                        value={meal.notes}
-                        onChange={(event) => handleMealChange(meal.id, 'notes', event.target.value)}
-                        placeholder="Add toppings, mood, appetite…"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={handleAddMeal} className="animate-button-pop">
-              ➕ Add Meal
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() =>
-                addMeal({
-                  category: 'Snack',
-                  time: getCurrentTimeString(),
-                  name: 'Fresh Fruit',
-                  quantity: '1',
-                  unit: 'bowl'
-                })
-              }
-            >
-              Quick Snack
-            </Button>
-          </div>
         </CardContent>
       </Card>
 
